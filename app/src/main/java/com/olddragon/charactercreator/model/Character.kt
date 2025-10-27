@@ -1,6 +1,7 @@
 package com.olddragon.charactercreator.model
 
 class Character(
+    val id: Long = 0,
     val name: String,
     val attributes: Map<String, Int>,
     val race: Race,
@@ -47,5 +48,3 @@ class Character(
         println("  Restrição de Itens Mágicos: ${characterClass.magicItemsRestriction}")
     }
 }
-
-

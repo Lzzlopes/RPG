@@ -11,6 +11,8 @@ import com.olddragon.charactercreator.data.CharacterEntity
 import com.olddragon.charactercreator.data.AttributeEntity
 import com.olddragon.charactercreator.data.RaceEntity
 import com.olddragon.charactercreator.data.CharacterClassEntity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.olddragon.charactercreator.model.Character
 import com.olddragon.charactercreator.model.CharacterClass
@@ -55,6 +57,10 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
     val selectedRace = mutableStateOf<Race>(Human())
     val selectedClass = mutableStateOf<CharacterClass>(Warrior())
     val createdCharacter = mutableStateOf<Character?>(null)
+    
+    // Character List State
+    private val _characterList = MutableStateFlow<List<Character>>(emptyList())
+    val characterList: StateFlow<List<Character>> = _characterList
 
     // Available options
     val attributeStrategies = listOf(
@@ -78,7 +84,7 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
 
     fun onAttributeStrategySelected(strategy: AttributeGenerationStrategy) {
         selectedAttributeStrategy.value = strategy
-        generatedAttributeRolls.value = emptyMap() // Clear previous rolls
+        generatedAttributeRolls.value = emptyMap()
         assignedAttributes.value = mutableMapOf(
             "Força" to 0,
             "Destreza" to 0,
@@ -86,14 +92,13 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
             "Inteligência" to 0,
             "Sabedoria" to 0,
             "Carisma" to 0
-        ) // Reset assigned attributes
+        )
     }
 
     fun generateAttributes() {
         val generated = selectedAttributeStrategy.value.generateAttributes()
         generatedAttributeRolls.value = generated
 
-        // For Classic strategy, directly assign attributes
         if (selectedAttributeStrategy.value is ClassicAttributeStrategy) {
             assignedAttributes.value = generated.toMutableMap()
         }
@@ -113,9 +118,8 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
         selectedClass.value = characterClass
     }
 
-    fun createCharacter() {
+    fun createCharacter(onSuccess: (Long) -> Unit = {}) {
         viewModelScope.launch {
-            // Simplified values for HP, CA, BA, JP, Languages, Alignment for demonstration
             val hp = 10
             val ca = 10
             val ba = 1
@@ -124,7 +128,6 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
             val languages = listOf("Comum", selectedRace.value.name).joinToString(",")
             val alignment = selectedRace.value.alignment
 
-            // Insert Race and Class first to get their IDs
             val raceEntity = RaceEntity(
                 name = selectedRace.value.name,
                 movement = selectedRace.value.movement,
@@ -159,13 +162,13 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
                 characterDao.insertAttribute(AttributeEntity(characterId = characterId, name = attrName, value = attrValue))
             }
 
-            // Retrieve the created character with details for display
             createdCharacter.value = characterDao.getCharacterWithDetails(characterId)?.let { details ->
-                com.olddragon.charactercreator.model.Character(
+                Character(
+                    id = details.character.id,
                     name = details.character.name,
                     attributes = details.attributes.associate { it.name to it.value },
-                    race = selectedRace.value, // Use original model object for abilities
-                    characterClass = selectedClass.value, // Use original model object for abilities
+                    race = selectedRace.value,
+                    characterClass = selectedClass.value,
                     hp = details.character.hp,
                     ca = details.character.ca,
                     ba = details.character.ba,
@@ -175,7 +178,77 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
                     alignment = details.character.alignment
                 )
             }
+            
+            onSuccess(characterId)
+            loadAllCharacters()
+        }
+    }
+    
+    fun loadAllCharacters() {
+        viewModelScope.launch {
+            val entities = characterDao.getAllCharacters()
+            val characters = entities.mapNotNull { entity ->
+                characterDao.getCharacterWithDetails(entity.id)?.let { details ->
+                    Character(
+                        id = details.character.id,
+                        name = details.character.name,
+                        attributes = details.attributes.associate { it.name to it.value },
+                        race = getRaceFromName(details.race.name),
+                        characterClass = getClassFromName(details.characterClass.name),
+                        hp = details.character.hp,
+                        ca = details.character.ca,
+                        ba = details.character.ba,
+                        jp = details.character.jp,
+                        movement = details.character.movement,
+                        languages = details.character.languages.split(","),
+                        alignment = details.character.alignment
+                    )
+                }
+            }
+            _characterList.value = characters
+        }
+    }
+    
+    fun deleteCharacter(characterId: Long) {
+        viewModelScope.launch {
+            characterDao.deleteCharacter(characterId)
+            loadAllCharacters()
+        }
+    }
+    
+    fun resetCreationForm() {
+        characterName.value = ""
+        generatedAttributeRolls.value = emptyMap()
+        assignedAttributes.value = mutableMapOf(
+            "Força" to 0,
+            "Destreza" to 0,
+            "Constituição" to 0,
+            "Inteligência" to 0,
+            "Sabedoria" to 0,
+            "Carisma" to 0
+        )
+        selectedRace.value = Human()
+        selectedClass.value = Warrior()
+        selectedAttributeStrategy.value = ClassicAttributeStrategy()
+        createdCharacter.value = null
+    }
+    
+    private fun getRaceFromName(name: String): Race {
+        return when (name) {
+            "Humano" -> Human()
+            "Elfo" -> Elf()
+            "Anão" -> Dwarf()
+            "Halfling" -> Halfling()
+            else -> Human()
+        }
+    }
+    
+    private fun getClassFromName(name: String): CharacterClass {
+        return when (name) {
+            "Guerreiro" -> Warrior()
+            "Clérigo" -> Cleric()
+            "Ladrão" -> Thief()
+            else -> Warrior()
         }
     }
 }
-
