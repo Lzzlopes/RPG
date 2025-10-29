@@ -9,10 +9,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.olddragon.charactercreator.controller.CharacterCreationViewModel
+import com.olddragon.charactercreator.controller.CombatViewModel
 import com.olddragon.charactercreator.navigation.Screen
 import com.olddragon.charactercreator.ui.theme.BlackBullsTheme
 
@@ -25,12 +28,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val viewModel = ViewModelProvider(
+                    val characterViewModel = ViewModelProvider(
                         this,
                         ViewModelProvider.AndroidViewModelFactory.getInstance(application)
                     ).get(CharacterCreationViewModel::class.java)
                     
-                    MainNavigation(viewModel)
+                    val combatViewModel = ViewModelProvider(
+                        this,
+                        ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+                    ).get(CombatViewModel::class.java)
+                    
+                    MainNavigation(characterViewModel, combatViewModel)
                 }
             }
         }
@@ -38,7 +46,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainNavigation(viewModel: CharacterCreationViewModel) {
+fun MainNavigation(
+    characterViewModel: CharacterCreationViewModel,
+    combatViewModel: CombatViewModel
+) {
     val navController = rememberNavController()
 
     NavHost(
@@ -50,11 +61,40 @@ fun MainNavigation(viewModel: CharacterCreationViewModel) {
         }
 
         composable(Screen.CharacterList.route) {
-            CharacterListScreen(navController, viewModel)
+            CharacterListScreen(navController, characterViewModel)
         }
 
         composable(Screen.CreateCharacter.route) {
-            CreateCharacterScreen(navController, viewModel)
+            CreateCharacterScreen(navController, characterViewModel)
+        }
+        
+        composable(
+            route = Screen.Combat.route,
+            arguments = listOf(
+                navArgument("characterId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val characterId = backStackEntry.arguments?.getLong("characterId") ?: 0L
+            CombatScreen(
+                navController = navController,
+                characterId = characterId,
+                characterViewModel = characterViewModel,
+                combatViewModel = combatViewModel
+            )
+        }
+        
+        composable(
+            route = Screen.CombatHistory.route,
+            arguments = listOf(
+                navArgument("characterId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val characterId = backStackEntry.arguments?.getLong("characterId") ?: 0L
+            CombatHistoryScreen(
+                navController = navController,
+                characterId = characterId,
+                combatViewModel = combatViewModel
+            )
         }
     }
 }

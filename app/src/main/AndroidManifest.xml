@@ -15,5 +15,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- Serviço de Combate -->
+        <service
+            android:name="com.olddragon.charactercreator.service.CombatService"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 </manifest>

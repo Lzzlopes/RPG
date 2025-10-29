@@ -97,7 +97,9 @@ fun CharacterListScreen(
                     items(characterList) { character ->
                         CharacterCard(
                             character = character,
-                            onClick = { /* Navigate to detail */ },
+                            onCombatClick = { 
+                                navController.navigate(Screen.Combat.createRoute(character.id))
+                            },
                             onDeleteClick = { characterToDelete = character }
                         )
                     }
@@ -202,13 +204,11 @@ private fun EmptyCharacterList(onCreateClick: () -> Unit) {
 @Composable
 private fun CharacterCard(
     character: Character,
-    onClick: () -> Unit,
+    onCombatClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = CardBackground
@@ -270,6 +270,22 @@ private fun CharacterCard(
                 StatItem("CA", character.ca.toString(), BlackBullsGold)
                 StatItem("BA", "+${character.ba}", SuccessGreen)
                 StatItem("MV", "${character.movement}m", AccentPurple)
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Botão de Combate
+            Button(
+                onClick = onCombatClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BlackBullsRed
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Sports, contentDescription = null) // Usando Sports como substituto
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Iniciar Combate", fontWeight = FontWeight.Bold)
             }
         }
     }
