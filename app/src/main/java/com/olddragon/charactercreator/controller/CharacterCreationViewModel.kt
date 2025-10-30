@@ -38,7 +38,7 @@ class CharacterCreationViewModel(application: Application) : AndroidViewModel(ap
             application,
             CharacterDatabase::class.java,
             "character-database"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
         characterDao = db.characterDao()
     }
 
